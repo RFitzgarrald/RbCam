@@ -267,8 +267,6 @@ plot(fitresult);
 % stdx = std(X);
 % stdy = std(Y);
 %Audible signal for the end of the code
-  load train
-  sound(y,Fs)
 %RSquare = table2array(Results(:,5));
 %Check to see if there are fits that are unusually poor
 % minR = min(RSquare);
@@ -276,3 +274,5 @@ plot(fitresult);
 % Y_range = max(Y)- min(Y);
 %}
 end
+  load train
+  sound(y,Fs)
