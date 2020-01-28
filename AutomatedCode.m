@@ -1,24 +1,28 @@
 %% beam movement calculation
+%Load background data here to have it subtracted from the image
 clear;clc;
-close all
-%figure;
+data = matfile('/Volumes/FLASHDRIVE2/WorkData/20200124/Background/background.mat');
+backg = data.Z1_filt;
 set(0,'DefaultFigureWindowStyle','docked')
 %Set w and h to the dimensions of the image
 w = 1200;
 h = 1200;
 x = 1:w;
 y = 1:h;
+X_fit = 1:1:w;
+Y_fit = 1:1:h;
 res = zeros(1,1);
-%Images = cell(1,1);    %creates cell array to store each image 
-MaxX = cell(1,1);      %creates cell array for the max X coordinate for each image
-MaxY = cell(1,1);      %creates cell array for the max Y coordinate for each image
-Y = cell(1,1);         %cell array for Y-value from each fit
-X = cell(1,1);         %cell array for X-value from each fit
-R2 = cell(1,1);        %cell array for R-squared value from each fit
-%Load background data here to have it subtracted from the image
-data = matfile('/Volumes/FLASHDRIVE2/WorkData/20200124/Background/background.mat');
-backg = data.Z1_filt;
-i = 8;                  %number of images to be summed together
+%l determines the number of image combinations you want to check
+for l = 199:200
+close all
+%figure;
+% MaxX = cell(1,1);      %creates cell array for the max X coordinate for each image
+% MaxY = cell(1,1);      %creates cell array for the max Y coordinate for each image
+% Y = cell(1,1);         %cell array for Y-value from each fit
+% X = cell(1,1);         %cell array for X-value from each fit
+%R2 = cell(1,1);        %cell array for R-squared value from each fit
+
+i = l;                  %number of images to be summed together
 %This loop sums 'i' images together, applies the fit, and stores the info;
 %it does this until it loops through all of the images
 for j = 1:400/i         %1:(total number of images/i)
@@ -45,8 +49,8 @@ Z1_summed = Z1_filt;
 %the fit
     [max_num, max_idx] = max(Z1_summed(:));
     [Xc,Yc] = ind2sub(size(Z1_summed),max_idx);
-    MaxX{j} = Xc;
-     MaxY{j} = Yc;
+%     MaxX{j} = Xc;
+%      MaxY{j} = Yc;
 %{     
 %% Multiply Raw Data by Another Function
 [X2,Y2] = meshgrid(x,y);
@@ -109,19 +113,16 @@ Filter = -c*(l*exp(-z*(exp(-((X2-m).^2/(t^2))-((Y2-n).^2/(d^2)))))-1/2);
 %Trimming the matrix can cause the center position to differ too much
 %between consecutive images, so this avoids cutting the matrix
  Z_fit = Z1_summed;
- X_fit = 1:1:w;
- Y_fit = 1:1:h;
     Z_fit=double(Z_fit);
-    format long
-    
+    format long   
     [fitresult, gof] = R_createFit(X_fit, Y_fit, Z_fit,Xc,Yc);  %uses fit code to create a fit
-    title(sprintf('%d',j));
+    title(sprintf('%d,%d',l,j));
     coeff = coeffvalues(fitresult);
-    Y{j} = coeff(5);                %stores x and y coordinates from the fit's center as well as each R-squared value
-    X{j} = coeff(6);
-    R2{j} = gof.rsquare;
+%    Y{j} = coeff(5);                %stores x and y coordinates from the fit's center as well as each R-squared value
+%    X{j} = coeff(6);
+%    R2{j} = gof.rsquare;
     norm = max(max(Z1_summed));
-    res(j)=mean(abs(Z1_summed-fitresult(x,y)),'all')/(norm);
+    res(l)=mean(abs(Z1_summed-fitresult(x,y)),'all')/(norm);
 end
 %{
 %Code for old Watec camera
@@ -162,9 +163,10 @@ Y_fit = y;
 %     res(k)=mean(abs(Z(X_fit,Y_fit)-Z_fit),'all')/(norm);
 end
 %}
-TotalCell = [MaxY' MaxX' X' Y' R2'];    %concatenates all the cells into one large cell array
-Results = cell2table(TotalCell);        %converts cell array to table
-Results.Properties.VariableNames = {'Max_Y','Max_X','Fit_X','Fit_Y','R_Squared'};   %renames table variables
+
+%TotalCell = [MaxY' MaxX' X' Y' R2'];    %concatenates all the cells into one large cell array
+%Results = cell2table(TotalCell);        %converts cell array to table
+%Results.Properties.VariableNames = {'Max_Y','Max_X','Fit_X','Fit_Y','R_Squared'};   %renames table variables
 hold off
 %% Figures
 % figure('Name','Data Filter');
@@ -222,13 +224,13 @@ title('Data Before Fit');
 xlim([x(1),x(end)]);
 ylim([y(1),y(end)]);
 %%
-figure('Name','Centers')
-% hold on;
-X = cell2mat(X);
-Y = cell2mat(Y);
-plot(X(1,:),Y(1,:),'o') %plot the center of gaussian fits
-% hold off;
-title('coordinates of the centers')
+% figure('Name','Centers')
+% % hold on;
+% X = cell2mat(X);
+% Y = cell2mat(Y);
+% plot(X(1,:),Y(1,:),'o') %plot the center of gaussian fits
+% % hold off;
+% title('coordinates of the centers')
 %%
 % figure ('Name','Original Function');
 % surf(x,y,Z1_filt)
@@ -267,9 +269,10 @@ plot(fitresult);
 %Audible signal for the end of the code
   load train
   sound(y,Fs)
-RSquare = table2array(Results(:,5));
+%RSquare = table2array(Results(:,5));
 %Check to see if there are fits that are unusually poor
-minR = min(RSquare);
-X_range = max(X)- min(X);
-Y_range = max(Y)- min(Y);
+% minR = min(RSquare);
+% X_range = max(X)- min(X);
+% Y_range = max(Y)- min(Y);
 %}
+end
