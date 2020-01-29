@@ -25,7 +25,7 @@ close all
 i = l;                  %number of images to be summed together
 %This loop sums 'i' images together, applies the fit, and stores the info;
 %it does this until it loops through all of the images
-for j = 1:400/i         %1:(total number of images/i)
+for j = 1:1         %1:(total number of images/i)
     Z1_filt = zeros(h,w);
     u = (1-i)+i*j;      
     v = u+i-1;          %set so that k will sum the next successive images and work its way through all of the images
