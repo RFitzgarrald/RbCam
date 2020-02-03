@@ -1,6 +1,7 @@
 %% beam movement calculation
 %Load background data here to have it subtracted from the image
-clear;clc;
+tic
+clear;clc;close all
 data = matfile('/Volumes/FLASHDRIVE2/WorkData/20200124/Background/background.mat');
 backg = data.Z1_filt;
 set(0,'DefaultFigureWindowStyle','docked')
@@ -11,10 +12,24 @@ x = 1:w;
 y = 1:h;
 X_fit = 1:1:w;
 Y_fit = 1:1:h;
-res = zeros(1,1);
+res = zeros(400,1);
+Images = cell(400,1);
+Sums = cell(400,1);
+%% Load Images into Array
+for s = 1:400
+    Im = fitsread(sprintf('SummedIm_%d.fit',s));
+    Images{s} = Im;
+end
+%% Sum Images and Store
+totalSum = zeros(h,w);
+for t = 1:400
+    noBG = Images{t} - backg;
+    totalSum = totalSum + noBG;
+    Sums{t} = totalSum;
+end
+%% Process Images
 %l determines the number of image combinations you want to check
-for l = 199:200
-close all
+for l = 215:400
 %figure;
 % MaxX = cell(1,1);      %creates cell array for the max X coordinate for each image
 % MaxY = cell(1,1);      %creates cell array for the max Y coordinate for each image
@@ -26,17 +41,18 @@ i = l;                  %number of images to be summed together
 %This loop sums 'i' images together, applies the fit, and stores the info;
 %it does this until it loops through all of the images
 for j = 1:1         %1:(total number of images/i)
-    Z1_filt = zeros(h,w);
-    u = (1-i)+i*j;      
-    v = u+i-1;          %set so that k will sum the next successive images and work its way through all of the images
-for k = u:v
-    %Adjust method of reading images based on file type
-    Z1 = fitsread(sprintf('SummedIm_%d.fit',k));
-    Z1_filter = Z1-backg;
-    Z1_filt = Z1_filt+Z1_filter;
-    %Images{k} = Z1_filt;   
-end
-Z1_summed = Z1_filt;
+%     Z1_filt = zeros(h,w);
+%     u = (1-i)+i*j;      
+%     v = u+i-1;          %set so that k will sum the next successive images and work its way through all of the images
+% for k = u:v
+%     %Adjust method of reading images based on file type
+%     Z1 = Images{k};
+%     %Z1 = fitsread(sprintf('SummedIm_%d.fit',k));
+%     Z1_filter = Z1-backg;
+%     Z1_filt = Z1_filt+Z1_filter;
+%     %Images{k} = Z1_filt;   
+% end
+Z1_summed = Sums{l};
 %Code to find the average of 10 summed background images
 %Z1_filt = Z1_filt./10;                             %Average out background 
 %save('background.mat','Z1_filt');
@@ -215,14 +231,14 @@ hold off
 % xlim([x(1),x(end)]);
 % ylim([y(1),y(end)]);
 
-figure('Name','Data Before Fit');
-surf(x,y,Z1_summed);
-shading interp
-view([0,90])
-axis equal
-title('Data Before Fit');
-xlim([x(1),x(end)]);
-ylim([y(1),y(end)]);
+% figure('Name','Data Before Fit');
+% surf(x,y,Z1_summed);
+% shading interp
+% view([0,90])
+% axis equal
+% title('Data Before Fit');
+% xlim([x(1),x(end)]);
+% ylim([y(1),y(end)]);
 %%
 % figure('Name','Centers')
 % % hold on;
@@ -251,8 +267,8 @@ ylim([y(1),y(end)]);
 % ylim([y(1),y(end)]);
 
 %%
-figure ('Name','Fit');
-plot(fitresult);
+% figure ('Name','Fit');
+% plot(fitresult);
 %%
 % figure ('Name','Final Image');
 % % subplot(2,2,2)
@@ -274,5 +290,6 @@ plot(fitresult);
 % Y_range = max(Y)- min(Y);
 %}
 end
-  load train
-  sound(y,Fs)
+toc
+%   load train
+%   sound(y,Fs)
