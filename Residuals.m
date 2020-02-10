@@ -2,8 +2,8 @@
 %Load background data here to have it subtracted from the image
 tic
 clear;clc;close all
-data = matfile('/Volumes/FLASHDRIVE2/WorkData/20200124/Background/background.mat');
-backg = data.Z1_filt;
+%data = matfile('/Volumes/FLASHDRIVE2/WorkData/20200124/Background/background.mat');
+%backg = data.Z1_filt;
 set(0,'DefaultFigureWindowStyle','docked')
 %Set w and h to the dimensions of the image
 w = 1200;
@@ -26,7 +26,7 @@ end
 %% Sum Images and Store
 totalSum = zeros(h,w);
 for t = 1:400
-    noBG = Images{t} - backg;
+    noBG = Images{t}; %- backg;
     totalSum = totalSum + noBG;
     Sums{t} = totalSum;
 end
@@ -50,7 +50,7 @@ Z1_summed = Sums{l};
 end
 %}
 for l = 1:400
-    Data = Images{l};
+    Data = Sums{l};
     [max_num, max_idx] = max(Data(:));
     [Xc,Yc] = ind2sub(size(Data),max_idx);
     Z_fit = double(Data);
@@ -61,9 +61,19 @@ for l = 1:400
     X_coord(l) = coeff(5);
     Y_coord(l) = coeff(6);
     Rsquare(l) = gof.rsquare;
-    norm = max(max(Data));
-    res(l)=mean(abs(Data-fitresult(x,y)),'all')/(norm);
+    %norm = max(max(Data));
+    %res(l)=mean(abs(Data-fitresult(x,y)),'all')/(norm);
+    Avg = Data/l;
+    Diff = zeros(w,h);
+    for j = 1:l
+        val = (Images{j}-Avg).^2;
+        Diff = Diff + val;
+    end
+    %val = (Data-fitresult(x,y)).^2;
+    pixelSum = sum(Diff,'all');
+    res(l) = (1/l)*sqrt(pixelSum);
 end
+display(gof.rsquare);
 hold off
 %% Figures
 toc
