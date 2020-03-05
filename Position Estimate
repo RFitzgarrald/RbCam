@@ -1,0 +1,148 @@
+%%Position Error Estimate
+clear;clc;close all
+set(0,'DefaultFigureWindowStyle','docked')
+%Set w and h to the dimensions of the image
+w = 1200;
+h = 1200;
+x = 1:w;
+y = 1:h;
+X_fit = 1:1:w;
+Y_fit = 1:1:h;
+sumNum = 96;
+n = floor(400/sumNum);
+res = zeros(n,1);
+Rsquare = zeros(n,1);
+X_coord = zeros(n,1);
+Y_coord = zeros(n,1);
+%% Load Images into Array
+Images = cell(400,1);
+for s = 1:400
+    Im = fitsread(sprintf('SummedIm_%d.fit',s));
+    Images{s} = Im;
+end
+%% Sum Images and Store
+Sums = cell(n,1);
+for t = 1:n
+    u = (1-sumNum)+sumNum*t;
+    v = u + sumNum -1;
+    totalSum = zeros(h,w);
+    for k = u:v
+        Iter = Images{k};
+        totalSum = totalSum + Iter;
+    end
+    Sums{t} = totalSum;
+end
+
+%%
+deltaY_sum1 = zeros(n,1);
+curveY_sum1 = zeros(n,1);
+curveX_sum1 = zeros(n,1);
+deltaX_sum1 = zeros(n,1);
+avgSlope_Y_sum1 = zeros(n,1);
+deltaY_2_sum1 = zeros(n,1);
+for l = 1:n
+Data = Sums{l};
+[max_num, max_idx] = max(Data(:));
+[Xc,Yc] = ind2sub(size(Data),max_idx);
+Z_fit = double(Data);
+
+%Take a cross-section to find position error in y-direction
+yData = Data(Xc,:);
+limitValue_Y = 100;
+centerWindow_Y = yData(Yc-limitValue_Y:Yc+limitValue_Y);
+% figure; plot(yData); xline(Yc-limitValue_Y); xline(Yc+limitValue_Y);
+% title(sprintf('Slice in the y-direction, image %d',l));
+% xlabel('Y-position');
+% ylabel('Intensity');
+
+%Calculate running averages in groups of 10
+R = 10;
+Yrs = zeros(2*limitValue_Y+1-R,1);
+for i = 1:2*limitValue_Y+1-R
+    for m = i:i+R-1
+        Yrs(i) = Yrs(i) + centerWindow_Y(m);
+    end
+    Yrs(i) = Yrs(i)/10;
+end
+
+%Find the max position
+[Ymax,idx] = max(Yrs);
+z = 10;
+% figure;
+% plot(Yrs,'o'); title('Running Average');xline(idx-z); xline(idx+z);
+
+%Calculate error at max using next neighbors
+NNSum = 0;
+for j = idx-5:idx+5
+    NNSum = NNSum + (Yrs(j) - Yrs(j+1))^2;
+    YTopError = sqrt(NNSum)/sqrt(10);
+end
+%Find FWHM indices
+half1idx = find(Yrs > (Ymax/2),1);
+half2idx = find(Yrs(idx:end) < (Ymax/2),1) + (idx-2);
+%Calculate error at FWHMs
+LeftHalfNNSum = 0;
+for j = half1idx-5:half1idx+5
+    LeftHalfNNSum = LeftHalfNNSum + (Yrs(j) - Yrs(j+1))^2;
+    YLeftFWHMError = sqrt(LeftHalfNNSum)/sqrt(10);
+end
+RightHalfNNSum = 0;
+for j = half2idx-5:half2idx+5
+    RightHalfNNSum = RightHalfNNSum + (Yrs(j) - Yrs(j+1))^2;
+    YRightFWHMError = sqrt(RightHalfNNSum)/sqrt(10);
+end
+
+%Average slope at FWHM
+N = 5;
+firstDer_Y = zeros(2*N+1,1);
+for M = half1idx-N:half1idx+N
+    firstDer_Y(M-(half1idx-N-1)) = Yrs(M+1)-Yrs(M);
+end
+avgSlope_Y = mean(firstDer_Y);
+avgSlope_Y_sum1(l) = avgSlope_Y;
+%xline(half1idx-N); xline(half1idx+N);
+%Find the average curvature
+
+secondDer_Y = zeros(2*z+1,1);
+for i=idx-z:idx+z
+    secondDer_Y(i-(idx-z-1)) = Yrs(i+1) - 2*Yrs(i) + Yrs(i-1);
+end
+avgCurve_Y = mean(secondDer_Y);
+curveY_sum1(l) = avgCurve_Y;
+
+%Calculate the uncertainty in position using top
+deltaZ_Y = YTopError;
+deltaY = sqrt(deltaZ_Y)/sqrt(sqrt(length(secondDer_Y))*0.5*abs(avgCurve_Y));
+deltaY_sum1(l) = deltaY;
+
+%Calculate uncertainty using FWHM
+delta_FWHM = YLeftFWHMError;
+xFWHM = half2idx - half1idx;
+deltaY_2 = delta_FWHM/(avgSlope_Y_sum1(l)*0.5*xFWHM);
+deltaY_2_sum1(l) = deltaY_2;
+%{
+%Take a cross-section to find position error in x-direction
+xData = Data(:,Yc);
+limitValue_X = 15;
+centerWindow_X = xData(Xc-limitValue_X-1:Xc+limitValue_X+1);
+figure; plot(xData); xline(Xc-limitValue_X-1); xline(Xc+limitValue_X+1);
+title(sprintf('Slice in the x-direction, image %d',l));
+xlabel('X-position');
+ylabel('Intensity');
+
+%Find the average curvature
+secondDer_X = zeros(2*limitValue_X-2,1);
+for i=2:2*limitValue_X+7
+    secondDer_X(i-1) = centerWindow_X(i+1) - 2*centerWindow_X(i) + centerWindow_X(i-1);
+end
+avgCurve_X = mean(secondDer_X);
+curveX_sum1(l) = avgCurve_X;
+
+%Calculate the uncertainty in position
+deltaZ_X = sqrt(2)*0.1795;
+deltaX = sqrt(deltaZ_X)/sqrt(sqrt(2*limitValue_X)*0.5*abs(avgCurve_X));
+deltaX_sum1(l) = deltaX;
+%}
+end
+AvgError = mean(deltaY_sum1);
+AvgError_2 = mean(deltaY_2_sum1);
